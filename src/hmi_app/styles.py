@@ -1,4 +1,5 @@
 import customtkinter as ctk
+from CTkMessagebox import CTkMessagebox
 import threading
 import time
 
@@ -10,7 +11,7 @@ class FoodWasteGUI:
 
     def __init__(self):
 
-        self.root = ctk.CTk()
+        self.root=ctk.CTk()
 
         self.root.geometry("1000x650")
         self.root.title("음식물 처리 시스템")
@@ -21,13 +22,18 @@ class FoodWasteGUI:
 
         self.home_button=None
 
-        self.steps = [
+        self.is_running=False
+        self.emergency_stop=False
+
+        self.steps=[
+
             "통 파지",
             "배출 위치 이동",
             "음식물 배출",
             "세척 중",
             "초기 위치 복귀",
             "작업 완료"
+
         ]
 
         self.step_labels=[]
@@ -44,6 +50,13 @@ class FoodWasteGUI:
             widget.destroy()
 
         self.step_labels=[]
+
+        self.is_running=False
+        self.emergency_stop=False
+
+        self.root.configure(
+            fg_color="#d8c6ff"
+        )
 
         title=ctk.CTkLabel(
 
@@ -73,7 +86,6 @@ class FoodWasteGUI:
         card=ctk.CTkFrame(
 
             self.root,
-
             width=800,
             height=180,
 
@@ -97,8 +109,6 @@ class FoodWasteGUI:
 
             width=220,
             height=80,
-
-            corner_radius=20,
 
             font=("맑은 고딕",16,"bold"),
 
@@ -126,8 +136,6 @@ class FoodWasteGUI:
 
             hover_color="#ff2f87",
 
-            corner_radius=20,
-
             font=("맑은 고딕",16,"bold"),
 
             command=lambda:self.start(2)
@@ -138,7 +146,6 @@ class FoodWasteGUI:
             x=450,
             y=50
         )
-
 
 
         self.status=ctk.CTkLabel(
@@ -156,7 +163,6 @@ class FoodWasteGUI:
         )
 
 
-
         self.progress=ctk.CTkProgressBar(
 
             self.root,
@@ -172,12 +178,9 @@ class FoodWasteGUI:
 
 
 
-        # ========= 단계 표시 =========
-
         line_frame=ctk.CTkFrame(
 
             self.root,
-
             fg_color="transparent"
 
         )
@@ -185,6 +188,7 @@ class FoodWasteGUI:
         line_frame.pack(
             pady=50
         )
+
 
 
         for i,step in enumerate(self.steps):
@@ -196,14 +200,11 @@ class FoodWasteGUI:
                 text=step,
 
                 width=100,
-
                 height=40,
 
                 fg_color="#d9d9d9",
 
                 corner_radius=15,
-
-                text_color="black",
 
                 font=("맑은 고딕",14,"bold")
 
@@ -215,6 +216,7 @@ class FoodWasteGUI:
             )
 
             self.step_labels.append(label)
+
 
 
             if i<len(self.steps)-1:
@@ -234,8 +236,31 @@ class FoodWasteGUI:
                 )
 
 
+        # 테스트용 비상 버튼
+        error_btn=ctk.CTkButton(
+
+            self.root,
+
+            text="통 탈락 시뮬레이션",
+
+            fg_color="red",
+
+            hover_color="#aa0000",
+
+            command=self.trigger_drop_error
+
+        )
+
+        error_btn.pack()
+
+
 
     def start(self,mode):
+
+        if self.is_running:
+            return
+
+        self.is_running=True
 
         self.progress.set(0)
 
@@ -256,6 +281,9 @@ class FoodWasteGUI:
 
         for i,step in enumerate(self.steps):
 
+            if self.emergency_stop:
+                return
+
             progress=(i+1)/total
 
             self.root.after(
@@ -267,9 +295,11 @@ class FoodWasteGUI:
                 i,
                 step,
                 progress
+
             )
 
             time.sleep(2)
+
 
 
         self.root.after(
@@ -281,10 +311,10 @@ class FoodWasteGUI:
 
     def update_ui(
 
-        self,
-        current,
-        step,
-        progress
+            self,
+            current,
+            step,
+            progress
 
     ):
 
@@ -292,9 +322,7 @@ class FoodWasteGUI:
             text=step
         )
 
-        self.progress.set(
-            progress
-        )
+        self.progress.set(progress)
 
 
         for i,label in enumerate(self.step_labels):
@@ -319,7 +347,51 @@ class FoodWasteGUI:
 
 
 
+    def trigger_drop_error(self):
+
+        self.emergency_stop=True
+
+        self.show_fatal_error()
+
+
+
+    def show_fatal_error(self):
+
+        self.root.configure(
+            fg_color="#ff4040"
+        )
+
+        self.status.configure(
+            text="⚠ 위험 : 통 탈락 감지"
+        )
+
+        self.progress.set(0)
+
+
+        CTkMessagebox(
+
+            title="비상 경고",
+
+            message="""
+통 이탈 감지
+
+모든 동작 강제 중지
+안전 상태 진입
+관리자 확인 필요
+            """,
+
+            icon="cancel"
+
+        )
+
+        self.show_home_button()
+
+
+
     def show_home_button(self):
+
+        if self.home_button:
+            return
 
         self.home_button=ctk.CTkButton(
 
@@ -335,8 +407,6 @@ class FoodWasteGUI:
             fg_color="#47c47d",
 
             hover_color="#2da863",
-
-            corner_radius=20,
 
             command=self.create_ui
 
